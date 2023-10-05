@@ -23,8 +23,8 @@ const ProfileComponent = () => {
     resolver: yupResolver(schema)
   });
 
-  const handleError = async (error) => {
-    toast.error(JSON.stringify(error));
+  const handleError = async (error, code) => {
+    toast.error(code || JSON.stringify(error));
     await authService.logout(); 
     navigate('/');
   }
@@ -35,6 +35,8 @@ const ProfileComponent = () => {
       const result = await authService.createNotification(data);
       if (result.data) {
         fetchNotifications();
+      } else {
+        throw new Error("Token expired")
       }
     } catch (error) {
       handleError(error)
@@ -45,32 +47,32 @@ const ProfileComponent = () => {
   const handleDeleteNotification = async (id) => {
     try {
       const result = await authService.deleteNotification({id});
-      if (result.data) {
+      console.log(result)
+      if (result.data.status !== 401) {
         toast.success('Notification deleted!');
         fetchNotifications();
+      } else {
+        throw new Error("Token expired")
       }
     } catch (error) {
-      handleError(error)
+      handleError(error, 401)
     }
   }
 
   const fetchProfile = async () => {
-    try {
-      const result = await authService.profile();
-      setUser(result)
-    } catch (error) {
-      handleError(error)
-    }
+    const result = await authService.profile();
+    setUser(result)
   }
 
   const fetchNotifications = async () => {
     authService.getNotifications().then(result => {
-      if(result.data.result === false || result.data.status === 401) {
+      console.log(result)
+      if(result.data.total === undefined) {
         throw new Error("Token expired")
       } else {
         setNotifications(result.data.list)
       }
-    }).catch(handleError)
+    }).catch(handleError, 401)
   }
 
   useEffect(() => {
