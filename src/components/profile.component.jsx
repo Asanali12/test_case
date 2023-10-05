@@ -4,17 +4,15 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import authService from '../services/auth.service';
+import { useNavigate } from 'react-router-dom';
 
 const ProfileComponent = () => {
+
+  const navigate = useNavigate()
 
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([])
   const [notificationIsSubmitted, setNotificationIsSubmitted] = useState(false);
-
-  useEffect(() => {
-    fetchProfile();
-    fetchNotifications();
-  }, []);
 
   const schema = Yup.object().shape({
     text: Yup.string().required()
@@ -25,6 +23,12 @@ const ProfileComponent = () => {
     resolver: yupResolver(schema)
   });
 
+  const handleError = async (error) => {
+    toast.error(JSON.stringify(error));
+    await authService.logout(); 
+    navigate('/');
+  }
+
   const handleValidSubmit = async (data) => {
     setNotificationIsSubmitted(true)
     try {
@@ -33,7 +37,7 @@ const ProfileComponent = () => {
         fetchNotifications();
       }
     } catch (error) {
-      toast.error(JSON.stringify(error));
+      handleError(error)
     }
     setNotificationIsSubmitted(false)
   }
@@ -46,7 +50,7 @@ const ProfileComponent = () => {
         fetchNotifications();
       }
     } catch (error) {
-      toast.error(JSON.stringify(error));
+      handleError(error)
     }
   }
 
@@ -55,7 +59,7 @@ const ProfileComponent = () => {
       const result = await authService.profile();
       setUser(result)
     } catch (error) {
-      toast.error(error.data.message);
+      handleError(error)
     }
   }
 
@@ -66,11 +70,13 @@ const ProfileComponent = () => {
       } else {
         setNotifications(result.data.list)
       }
-    }).catch(error => {
-      toast.error(JSON.stringify(error));
-      authService.logout();
-    })
+    }).catch(handleError)
   }
+
+  useEffect(() => {
+    fetchProfile();
+    fetchNotifications();
+  }, []);
 
   return (
     <>
